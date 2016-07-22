@@ -1,6 +1,7 @@
 language: cpp
 script: 
   - mkdir build && cd build && cmake .. && make -j 8
+  - ./KmerInShort -file ../data/example.fasta -kmer-size 4 -out resu &&  diff ./resu ../data/refresu
 compiler:
   - gcc
   - clang
