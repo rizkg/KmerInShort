@@ -1,0 +1,2 @@
+# KmerInShort
+short kmer counter
