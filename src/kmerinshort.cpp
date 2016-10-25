@@ -23,7 +23,7 @@ public:
 	void operator() (Sequence& sequence)
 	{
 		//raz du cpt des kmer
-		if(_kismode)
+		if(_kismode || _sepmode)
 		{
 			_count_table_current_bank.assign(_nbDiffKmers,0);
 		}
@@ -53,7 +53,7 @@ public:
 			
 			nbkmers ++;
 			
-			if(_kismode)
+			if(_kismode || _sepmode)
 			{
 				if(_count_table_current_bank [itKmer->value().getVal()]< 4294967295)
 				{
@@ -90,6 +90,47 @@ public:
 			
 		}
 		
+		if(_sepmode)
+		{
+			
+			uint64_t total_nb=0;
+			if(_freqmode)
+			{
+				for(uint64_t km = 0; km <_nbDiffKmers; km++ )
+				{
+						total_nb+= _count_table_current_bank[km];
+				}
+			}
+			
+
+			
+			char _outfile_seq_name[10000];
+			
+			sprintf(_outfile_seq_name,"%s_%s",_outputFilename.c_str(),sequence.getComment().c_str());
+			FILE * _outfile_seq = fopen(_outfile_seq_name,"w");
+	
+		
+			for(uint64_t km = 0; km <_nbDiffKmers; km++ )
+			{
+				kmer_type km2; km2.setVal(km);
+				fprintf(_outfile_seq,"%s",_model->toString(km2).c_str());
+				{
+					if(_freqmode)
+					{
+						fprintf(_outfile_seq,"\t%f", _count_table_current_bank[km] / (double)total_nb );
+					}
+					else
+					{
+						fprintf(_outfile_seq,"\t%i", _count_table_current_bank[km]);
+					}
+				}
+				fprintf(_outfile_seq,"\n");
+			}
+			fclose(_outfile_seq);
+			
+		}
+		
+		
 		seqdone++;
 		if (seqdone > 1000)   {  _progress.inc (seqdone);  seqdone = 0;  }
 		
@@ -99,11 +140,11 @@ public:
 	KmerCounter(modelT * model,
 				count_t * count_table_current_bank,
 				u_int64_t nbDiffKmers,
-				IteratorListener* progress,int offset, int step, double * ref_table, double * resuvec_perseq, bool kismode)
+				IteratorListener* progress,int offset, int step, double * ref_table, double * resuvec_perseq, bool kismode, bool sepmode, bool freqmode,std::string outputFilename)
 	:_model(model),seqdone(0),_progress(progress,System::thread().newSynchronizer()),_offset(offset),_step(step), _ref_table(ref_table),_resuvec_perseq(resuvec_perseq),_nbDiffKmers(nbDiffKmers),_kismode(kismode),
-	_count_table_current_bank_global(count_table_current_bank)
+	_count_table_current_bank_global(count_table_current_bank),_sepmode(sepmode),_freqmode(freqmode),_outputFilename(outputFilename)
 	{
-		if(_kismode)
+		if(_kismode || _sepmode)
 		{
 			_count_table_current_bank.resize(_nbDiffKmers,0);
 		}
@@ -123,9 +164,12 @@ public:
 	u_int64_t _nbDiffKmers;
 	bool _kismode;
 
+
 	std::vector<count_t> _count_table_current_bank; //now per seq so per thread
 	count_t * _count_table_current_bank_global;
-
+	bool _sepmode;
+	bool _freqmode;
+	std::string _outputFilename;
 	
 };
 
@@ -138,7 +182,8 @@ kis::kis ()  : Tool ("kis"),_progress (0)
 {
 	_offset =0;
 	_step = 1;
-
+	_freqmode = false;
+	
 	getParser()->push_back (new OptionOneParam (STR_URI_FILE, "input file ",   true));
 	getParser()->push_back (new OptionOneParam (STR_KMER_SIZE, "ksize",   true));
 	getParser()->push_back( new OptionOneParam(STR_URI_OUTPUT, "output file", false));
@@ -146,6 +191,9 @@ kis::kis ()  : Tool ("kis"),_progress (0)
 	getParser()->push_back (new OptionOneParam ("-step", "step",   false,"1"));
 	getParser()->push_back (new OptionOneParam (STR_REFK, "file with kmer values ",   false));
 	getParser()->push_back(new  OptionNoParam("-dont-reverse", "do not reverse kmers, count forward and reverse complement separately", false));
+	getParser()->push_back(new  OptionNoParam("-freq", "output frequency", false));
+	getParser()->push_back(new  OptionNoParam("-perSeq", "one output file and count per fasta sequence", false));
+
 
 }
 
@@ -195,9 +243,14 @@ void kis::execute ()
 	else
 		fprintf(stderr,"Counting in canonical mode (kmer and their reverse complement counted together) \n");
 
+	_freqmode = getParser()->saw("-freq");
+
+	
+	
 	 getInput()->setInt (STR_VERBOSE, 0); //we force verbose 0
 	
 	_kismode = getParser()->saw(STR_REFK);
+	_sepmode = getParser()->saw("-perSeq");
 	
 	_offset = (getInput()->getInt("-offset"));
 	if(_offset<0)
@@ -317,9 +370,9 @@ void kis::execute ()
 		setDispatcher (  new Dispatcher (_nb_cores) );
 		
 		if(_dontreverse)
-			getDispatcher()->iterate (itSeq,  KmerCounter<ModelDirect>(&modeld,count_table_current_bank,_nbDiffKmers,_progress,_offset,_step,_ref_table,_resu_table,_kismode), 1000);
+			getDispatcher()->iterate (itSeq,  KmerCounter<ModelDirect>(&modeld,count_table_current_bank,_nbDiffKmers,_progress,_offset,_step,_ref_table,_resu_table,_kismode,_sepmode,_freqmode,_outputFilename), 1000);
 		else
-			getDispatcher()->iterate (itSeq,  KmerCounter<ModelCanonical>(&model,count_table_current_bank,_nbDiffKmers,_progress,_offset,_step,_ref_table,_resu_table,_kismode), 1000);
+			getDispatcher()->iterate (itSeq,  KmerCounter<ModelCanonical>(&model,count_table_current_bank,_nbDiffKmers,_progress,_offset,_step,_ref_table,_resu_table,_kismode,_sepmode,_freqmode,_outputFilename), 1000);
 		
 		//output result
 		
@@ -340,6 +393,19 @@ void kis::execute ()
 	_progress->finish ();
 	
 	
+	std::vector<uint64_t> total_nb(itBanks.size(),0);
+	
+	if(_freqmode)
+	{
+		for(uint64_t km = 0; km <_nbDiffKmers; km++ )
+		{
+			for (size_t ii=0; ii<itBanks.size(); ii++)
+			{
+				total_nb[ii] += count_table[IX(km,ii)];
+			}
+		}
+	}
+	
 	
 	if(!_kismode)
 	{
@@ -349,13 +415,17 @@ void kis::execute ()
 			fprintf(_outfile,"%s",model.toString(km2).c_str());
 			for (size_t ii=0; ii<itBanks.size(); ii++)
 			{
-				fprintf(_outfile,"\t%i", count_table[IX(km,ii)]);
-				
+				if(_freqmode)
+				{
+					fprintf(_outfile,"\t%f", count_table[IX(km,ii)] / (double)total_nb[ii] );
+				}
+				else
+				{
+					fprintf(_outfile,"\t%i", count_table[IX(km,ii)]);
+				}
 			}
 			fprintf(_outfile,"\n");
-			
 		}
-		
 	}
 	
 	if(getParser()->saw(STR_URI_OUTPUT))

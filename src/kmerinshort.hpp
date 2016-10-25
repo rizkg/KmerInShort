@@ -49,13 +49,14 @@ class kis : public Tool
 	
 public:
 	bool _dontreverse;
+	bool _freqmode;
 	size_t          _kmerSize;
 	size_t          _nbBanks;
 	uint64_t _nbDiffKmers;
 	uint64_t _nbSeq;
 	int _offset;
 	int _step;
-	bool _kismode;
+
 	
 	IBank* _inputBank;
 	std::string _inputFilename;
@@ -73,6 +74,8 @@ public:
 	void setProgress (gatb::core::tools::dp::IteratorListener* progress)  { SP_SETATTR(progress); }
 	
 	
+	bool _kismode;
+	bool _sepmode;
 	
 	
 	// Constructor
