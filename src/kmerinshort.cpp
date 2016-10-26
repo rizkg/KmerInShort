@@ -106,7 +106,7 @@ public:
 			
 			char _outfile_seq_name[10000];
 			
-			sprintf(_outfile_seq_name,"%s_%s",_outputFilename.c_str(),sequence.getComment().c_str());
+			sprintf(_outfile_seq_name,"%s_%s.txt",_outputFilename.c_str(),sequence.getComment().c_str());
 			FILE * _outfile_seq = fopen(_outfile_seq_name,"w");
 	
 		
@@ -282,12 +282,16 @@ void kis::execute ()
 	if(getParser()->saw(STR_URI_OUTPUT))
 	{
 		_outputFilename = getInput()->getStr(STR_URI_OUTPUT);
-		_outfile = fopen(_outputFilename.c_str(),"w");
 		
-		if(_outfile==NULL)
+		if(! _sepmode)
 		{
-			fprintf(stderr,"cannot open %s \n",_outputFilename.c_str());
-			exit(1);
+			_outfile = fopen(_outputFilename.c_str(),"w");
+			
+			if(_outfile==NULL)
+			{
+				fprintf(stderr,"cannot open %s \n",_outputFilename.c_str());
+				exit(1);
+			}
 		}
 	}
 	else
@@ -344,7 +348,7 @@ void kis::execute ()
 		
 		std::vector<std::string> tabnames;
 		
-		if(itBanks.size() > 1)
+		if(itBanks.size() > 1 && ! _sepmode)
 		{
 			fprintf(_outfile,"-----Bank %zu ------\n",ii);
 		}
@@ -376,7 +380,7 @@ void kis::execute ()
 		
 		//output result
 		
-		if(_kismode)
+		if(_kismode && ! _sepmode)
 		{
 			for (u_int64_t nk= 0; nk<_nbSeq; nk++ )
 			{
@@ -407,7 +411,7 @@ void kis::execute ()
 	}
 	
 	
-	if(!_kismode)
+	if(!_kismode && ! _sepmode)
 	{
 		for(uint64_t km = 0; km <_nbDiffKmers; km++ )
 		{
@@ -428,7 +432,7 @@ void kis::execute ()
 		}
 	}
 	
-	if(getParser()->saw(STR_URI_OUTPUT))
+	if(getParser()->saw(STR_URI_OUTPUT) && ! _sepmode)
 		fclose(_outfile);
 	
 	if(_kismode)
