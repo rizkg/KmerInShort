@@ -41,47 +41,41 @@ typedef Kmer<>::ModelDirect    ModelDirect;
 
 class kis : public Tool
 {
-	
-	static const char* STR_REFK;
-	
-	void parse_ref ();
-	
+	static const char* STR_QUERY;
 	
 public:
 	bool _dontreverse;
-	bool _freqmode;
 	size_t          _kmerSize;
 	size_t          _nbBanks;
 	uint64_t _nbDiffKmers;
 	uint64_t _nbSeq;
-	int _offset;
-	int _step;
 
 	
 	IBank* _inputBank;
 	std::string _inputFilename;
-	std::string _kmerValFilename;
 	std::string _outputFilename;
+	std::string _countFilename;
+
 	FILE * _outfile;
-	FILE * _kmerRefFile;
-	
-	double * _ref_table;
-	double * _resu_table;
+	FILE * _countfile;
 	
 	int _nb_cores;
+
+	
+	bool _query_mode;
+
+	
 	
 	gatb::core::tools::dp::IteratorListener* _progress;
 	void setProgress (gatb::core::tools::dp::IteratorListener* progress)  { SP_SETATTR(progress); }
 	
-	
-	bool _kismode;
-	bool _sepmode;
 	
 	
 	// Constructor
 	kis ();
 	
 	void execute ();
+	void query ();
 	
 };
 
