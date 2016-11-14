@@ -2,8 +2,7 @@
 
 
 # KmerInShort
-KmerInShort counts kmers from a fasta/fastq file or list of files, and outputs results in a text file. It is limited to short kmers (k<15).
-It is a part of the [FEELnc](https://github.com/tderrien/FEELnc) pipeline from V.Wucher, F.Legai and T.Derrien, a pipeline to annotate long non-coding RNAs.
+KmerInShort counts kmers from a fasta/fastq file or list of files, and outputs results in a binary file. It is limited to short kmers (k<15). Counting is performed in memory, so limited to small kmers (k=15 will use 8GB ram), for larger kmers, use the dsk tool.
 
 # Installation
 To retrieve KmerInShort and its submodule (gatb-core), type 
