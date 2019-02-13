@@ -360,7 +360,10 @@ void kis::execute ()
 		for (itSeq->first(); !itSeq->isDone(); itSeq->next())
 		{
 			Sequence& seq = itSeq->item();
-			tabnames.push_back(seq.getComment());
+			if(_kismode)
+			{
+				tabnames.push_back(seq.getComment());
+			}
 			_nbSeq ++;
 		}
 		
