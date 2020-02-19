@@ -17,7 +17,10 @@ Then build the tool with
 
 
 ### example usage for NSE calculation
+KmerinShort is also able to compute the Normalized shannon entropy (NSE) of a dataset, as defined by F.Onate et al (see https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4373121/)
+
     ./KmerInShort -file file.fastq.gz -kmer-size 4 -nb-cores 8 -out result4s -sum -NSE
+    
     
 # Author
 Guillaume Rizk
