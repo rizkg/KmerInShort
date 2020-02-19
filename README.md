@@ -16,7 +16,7 @@ Then build the tool with
   
 
 
-# exmaple usage for NSE calculation
+### example usage for NSE calculation
     ./KmerInShort -file file.fastq.gz -kmer-size 4 -nb-cores 8 -out result4s -sum -NSE
     
 # Author
