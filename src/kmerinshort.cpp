@@ -379,6 +379,7 @@ void kis::execute ()
 			}
 			
 			_resu_table = (double *) calloc(_nbSeq,sizeof(double));
+
 		}
 		
 		//ProgressIterator<Sequence>* itSeq = itBanks[ii];
