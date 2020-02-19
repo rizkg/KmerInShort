@@ -15,6 +15,10 @@ Then build the tool with
     mkdir build;  cd build;  cmake ..;  make -j 8
   
 
+
+# exmaple usage for NSE calculation
+    ./KmerInShort -file file.fastq.gz -kmer-size 4 -nb-cores 8 -out result4s -sum -NSE
+    
 # Author
 Guillaume Rizk
 guillaume.rizk@algorizk.com
