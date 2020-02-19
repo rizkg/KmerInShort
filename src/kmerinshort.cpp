@@ -1,4 +1,6 @@
 #include <kmerinshort.hpp>
+#include <math.h>
+
 using namespace std;
 typedef uint32_t count_t;
 
@@ -183,6 +185,8 @@ kis::kis ()  : Tool ("kis"),_progress (0)
 	_offset =0;
 	_step = 1;
 	_freqmode = false;
+	_summode = false;
+	_NSEmode = false;
 	
 	getParser()->push_back (new OptionOneParam (STR_URI_FILE, "input file ",   true));
 	getParser()->push_back (new OptionOneParam (STR_KMER_SIZE, "ksize",   true));
@@ -193,6 +197,8 @@ kis::kis ()  : Tool ("kis"),_progress (0)
 	getParser()->push_back(new  OptionNoParam("-dont-reverse", "do not reverse kmers, count forward and reverse complement separately", false));
 	getParser()->push_back(new  OptionNoParam("-freq", "output frequency", false));
 	getParser()->push_back(new  OptionNoParam("-perSeq", "one output file and count per fasta sequence", false));
+	getParser()->push_back(new  OptionNoParam("-NSE", "compute normalized Shannon entropy", false));
+	getParser()->push_back(new  OptionNoParam("-sum", "compute sum over all files", false));
 
 
 }
@@ -252,6 +258,9 @@ void kis::execute ()
 	_kismode = getParser()->saw(STR_REFK);
 	_sepmode = getParser()->saw("-perSeq");
 	
+	_summode = getParser()->saw("-sum");
+	_NSEmode = getParser()->saw("-NSE");
+
 	_offset = (getInput()->getInt("-offset"));
 	if(_offset<0)
 	{
@@ -348,7 +357,7 @@ void kis::execute ()
 		
 		std::vector<std::string> tabnames;
 		
-		if(itBanks.size() > 1 && ! _sepmode)
+		if(itBanks.size() > 1 && _kismode && ! _sepmode)
 		{
 			fprintf(_outfile,"-----Bank %zu ------\n",ii);
 		}
@@ -357,14 +366,20 @@ void kis::execute ()
 		
 		//just to count nb seq :
 		_nbSeq = 0;
-		for (itSeq->first(); !itSeq->isDone(); itSeq->next())
+		if(_kismode)
 		{
-			Sequence& seq = itSeq->item();
-			tabnames.push_back(seq.getComment());
-			_nbSeq ++;
+			for (itSeq->first(); !itSeq->isDone(); itSeq->next())
+			{
+				Sequence& seq = itSeq->item();
+				if(_kismode)
+				{
+					tabnames.push_back(seq.getComment());
+				}
+				_nbSeq ++;
+			}
+			
+			_resu_table = (double *) calloc(_nbSeq,sizeof(double));
 		}
-		
-		_resu_table = (double *) calloc(_nbSeq,sizeof(double));
 		
 		//ProgressIterator<Sequence>* itSeq = itBanks[ii];
 		//printf("--- Counting  Bank %zu  ----\n",ii);
@@ -387,9 +402,9 @@ void kis::execute ()
 				fprintf(_outfile,"%s\t%f\n",tabnames[nk].c_str(),_resu_table[nk]);
 				
 			}
+			free(_resu_table);
 		}
 		
-		free(_resu_table);
 	}
 	
 	
@@ -399,7 +414,7 @@ void kis::execute ()
 	
 	std::vector<uint64_t> total_nb(itBanks.size(),0);
 	
-	if(_freqmode)
+//	if(_freqmode)
 	{
 		for(uint64_t km = 0; km <_nbDiffKmers; km++ )
 		{
@@ -410,16 +425,44 @@ void kis::execute ()
 		}
 	}
 	
-	
+	uint64_t totalsum = 0;
+	for (size_t ii=0; ii<itBanks.size(); ii++)
+	{
+		totalsum += total_nb[ii] ;
+	}
+	double nse= 0;
+	double nbK = 0;
 	if(!_kismode && ! _sepmode)
 	{
 		for(uint64_t km = 0; km <_nbDiffKmers; km++ )
 		{
-            kmer_type km2; km2.setVal(km);
+			kmer_type km2; km2.setVal(km);
+			kmer_type km2_rev;
+			uint64_t kmer_rev_value;
+			kmer_rev_value =  NativeInt64::revcomp64(km, _kmerSize);
+			
+			if(!_dontreverse)
+			{
+				if(kmer_rev_value < km) continue;
+				
+			}
+			nbK++;
+			
+
+			//km2_rev.setVal(kmer_rev_value);
+			
 			fprintf(_outfile,"%s",model.toString(km2).c_str());
+
+		//	fprintf(_outfile,"\t%s",model.toString(km2_rev).c_str());
+
+			count_t sum = 0;
 			for (size_t ii=0; ii<itBanks.size(); ii++)
 			{
-				if(_freqmode)
+				if(_summode)
+				{
+					sum+= count_table[IX(km,ii)] ;
+				}
+				else if(_freqmode)
 				{
 					fprintf(_outfile,"\t%f", count_table[IX(km,ii)] / (double)total_nb[ii] );
 				}
@@ -428,8 +471,33 @@ void kis::execute ()
 					fprintf(_outfile,"\t%i", count_table[IX(km,ii)]);
 				}
 			}
+			
+			double pi =  0;
+			if(_summode)
+			{
+				pi = sum / (double)totalsum ;
+
+				fprintf(_outfile,"\t%i", sum);
+				fprintf(_outfile,"\t%f", pi);
+			}
+
+			if(_NSEmode)
+			{
+				nse -= pi* log(pi);
+				//printf("pi %f log(pi) %f   prod %f \n",pi, log(pi),pi* log(pi));
+			}
+			
 			fprintf(_outfile,"\n");
 		}
+	}
+	
+//	printf("SE %f  nbk %i \n",nse, nbK);
+	if(_NSEmode)
+	{
+		nse = nse / log(nbK);
+		printf("NSE : %f \n",nse);
+		fprintf(_outfile,"NSE : %f \n", nse);
+
 	}
 	
 	if(getParser()->saw(STR_URI_OUTPUT) && ! _sepmode)

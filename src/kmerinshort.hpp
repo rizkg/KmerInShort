@@ -50,6 +50,8 @@ class kis : public Tool
 public:
 	bool _dontreverse;
 	bool _freqmode;
+	bool _summode;
+	bool _NSEmode;
 	size_t          _kmerSize;
 	size_t          _nbBanks;
 	uint64_t _nbDiffKmers;
